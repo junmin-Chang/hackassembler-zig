@@ -1,8 +1,12 @@
 const std = @import("std");
-const parser = @import("parser.zig");
+const Parser = @import("parser.zig").Parser;
 const codegen = @import("codegen.zig");
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     defer std.process.argsFree(std.heap.page_allocator, args);
 
@@ -16,8 +20,32 @@ pub fn main() !void {
     var input_file = try cwd.openFile(args[1], .{});
     defer input_file.close();
 
-    std.debug.print("filename: {s}, file: {}", .{ args[1], input_file });
+    var parser = Parser.init(allocator, input_file);
 
+    std.debug.print("Parsing .. {}\n", input_file);
+
+    while (parser.hasMoreLines()) {
+        try parser.advance();
+
+        switch (parser.instruction_type) {
+            .A_INSTRUCTION => {
+                std.debug.print("A-Instruction : {s}\n", .{parser.symbol()});
+            },
+            .L_INSTRUCTION => {
+                std.debug.print("L-Instruction: {s}\n", .{parser.symbol()});
+            },
+            .C_INSTRUCTION => {
+                std.debug.print("C-Instruction: dest={?s}, comp={?s}, jump={?s}\n", .{
+                    parser.dest(),
+                    parser.comp(),
+                    parser.jump(),
+                });
+            },
+            .NO_INSTRUCTION => {
+                std.debug.print("No Instruction\n", .{});
+            },
+        }
+    }
     // make output_dir to store generated machine code;
     cwd.makeDir("output") catch |err| switch (err) {
         error.PathAlreadyExists => {},

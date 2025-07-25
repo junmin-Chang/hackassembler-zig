@@ -2,6 +2,7 @@ const std = @import("std");
 
 const SymbolTableError = error{
     NotFoundSymbol,
+    AlreadyExistsSymbol,
 };
 
 pub const SymbolTable = struct {
@@ -45,14 +46,11 @@ pub const SymbolTable = struct {
         return self;
     }
 
-    // pub fn insert_var_symbol(self: *SymbolTable, key: []const u8) !void {
-    //     const key_copy = try self.allocator.dupe(u8, key);
-    //     try self.key_list.append(key_copy);
-    //     try self.table.put(key_copy, self.var_value);
-    //     self.var_value += 1;
-    // }
-
     pub fn addEntry(self: *SymbolTable, key: []const u8, value: ?u32) !void {
+        if (self.contains(key)) {
+            return SymbolTableError.AlreadyExistsSymbol;
+        }
+
         const key_copy = try self.allocator.dupe(u8, key); // "@xxx" || (LABEL)?
 
         try self.key_list.append(key_copy);
@@ -71,14 +69,17 @@ pub const SymbolTable = struct {
     }
 
     pub fn get_address(self: SymbolTable, key: []const u8) SymbolTableError!u32 {
+        // check if key exists in hash table
         if (self.contains(key)) {
             return self.table.get(key).?;
         } else {
+            // throw error if key doesn't exist in hash table
             return SymbolTableError.NotFoundSymbol;
         }
     }
 
     pub fn deinit(self: *SymbolTable) void {
+        // free not only table but also entries in ArrayList(key_list)
         self.table.deinit();
         for (self.key_list.items) |key| {
             self.allocator.free(key);

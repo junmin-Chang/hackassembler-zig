@@ -34,10 +34,10 @@ pub fn main() !void {
 
     // initialize parser & codegen module
     var parser = Parser.init(input_file);
-
     var codegen = Codegen.init();
     var symtab = SymbolTable.init(allocator);
     defer symtab.deinit();
+
     // 1-pass
     pass_1: while (parser.hasMoreLines()) {
         try parser.advance();
@@ -45,13 +45,15 @@ pub fn main() !void {
         // collect symbol
         switch (parser.instruction_type) {
             .L_INSTRUCTION => {
+                // (LABEL)
                 const symbol = parser.symbol();
-                try symtab.insert_label_symbol(symbol, parser.current_line);
+                try symtab.addEntry(symbol, parser.current_line);
             },
 
             else => continue :pass_1,
         }
     }
+
     try input_file.seekTo(0);
     parser = Parser.init(input_file);
     // 2-pass
@@ -61,24 +63,23 @@ pub fn main() !void {
 
         switch (parser.instruction_type) {
             .A_INSTRUCTION => {
-                // version 1 => @[only_numeric]
-                // version 2 => @[numeric || alphabetic symbol]
+                // @[numeric]
                 const symbol = parser.symbol();
                 if (std.ascii.isDigit(symbol[0])) {
                     try codegen.gen_a_inst(parser.symbol());
                     _ = try output_file.write(&codegen.a_code);
                     _ = try output_file.write("\n");
                 } else {
-                    // @xxx -> xxx = alphabetic
-                    if (symtab.table.contains(symbol)) {
-                        const value = try symtab.get_value(symbol);
+                    // @[alphabetic]
+                    if (symtab.contains(symbol)) {
+                        const value = try symtab.get_address(symbol);
                         try codegen.gen_a_inst(value);
                         _ = try output_file.write(&codegen.a_code);
                         _ = try output_file.write("\n");
                     } else {
-                        // insert
-                        try symtab.insert_var_symbol(symbol);
-                        const value = try symtab.get_value(symbol);
+                        // insert symbol to table
+                        try symtab.addEntry(symbol, null);
+                        const value = try symtab.get_address(symbol);
                         try codegen.gen_a_inst(value);
                         _ = try output_file.write(&codegen.a_code);
                         _ = try output_file.write("\n");

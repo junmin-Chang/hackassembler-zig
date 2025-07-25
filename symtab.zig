@@ -45,23 +45,33 @@ pub const SymbolTable = struct {
         return self;
     }
 
-    pub fn insert_var_symbol(self: *SymbolTable, key: []const u8) !void {
-        const key_copy = try self.allocator.dupe(u8, key);
+    // pub fn insert_var_symbol(self: *SymbolTable, key: []const u8) !void {
+    //     const key_copy = try self.allocator.dupe(u8, key);
+    //     try self.key_list.append(key_copy);
+    //     try self.table.put(key_copy, self.var_value);
+    //     self.var_value += 1;
+    // }
+
+    pub fn addEntry(self: *SymbolTable, key: []const u8, value: ?u32) !void {
+        const key_copy = try self.allocator.dupe(u8, key); // "@xxx" || (LABEL)?
+
         try self.key_list.append(key_copy);
-        try self.table.put(key_copy, self.var_value);
-        self.var_value += 1;
+        if (value == null) {
+            // @xxx
+            try self.table.put(key_copy, self.var_value);
+            self.var_value += 1;
+        } else {
+            // (LABEL)
+            try self.table.put(key_copy, value.?);
+        }
     }
 
-    pub fn insert_label_symbol(self: *SymbolTable, key: []const u8, line: u32) !void {
-        const key_copy = try self.allocator.dupe(u8, key);
-        try self.key_list.append(key_copy);
-        try self.table.put(key_copy, line);
+    pub fn contains(self: SymbolTable, key: []const u8) bool {
+        return self.table.contains(key);
     }
 
-    pub fn get_value(self: SymbolTable, key: []const u8) SymbolTableError!u32 {
-        const is_exist = self.table.contains(key);
-
-        if (is_exist) {
+    pub fn get_address(self: SymbolTable, key: []const u8) SymbolTableError!u32 {
+        if (self.contains(key)) {
             return self.table.get(key).?;
         } else {
             return SymbolTableError.NotFoundSymbol;

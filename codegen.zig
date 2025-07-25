@@ -34,7 +34,7 @@ pub const Codegen = struct {
             self.dest_code = "001".*;
         } else if (eql(u8, str, "D")) {
             self.dest_code = "010".*;
-        } else if (eql(u8, str, "DM")) {
+        } else if (eql(u8, str, "DM") or eql(u8, str, "MD")) { // WTF?  "MD" is not specified in books.. but it is needed
             self.dest_code = "011".*;
         } else if (eql(u8, str, "A")) {
             self.dest_code = "100".*;
@@ -45,6 +45,7 @@ pub const Codegen = struct {
         } else if (eql(u8, str, "ADM")) {
             self.dest_code = "111".*;
         } else {
+            std.debug.print("Invalid Destcode : {s} : {s}\n", .{ str, self.dest_code });
             return CodeError.InvalidDestCode;
         }
     }
@@ -141,16 +142,20 @@ pub const Codegen = struct {
         } else return CodeError.InvalidJumpCode;
     }
 
-    pub fn gen_a_inst(self: *Codegen, symbol_str: []const u8) !void {
+    pub fn gen_a_inst(self: *Codegen, symbol: anytype) !void {
         // version 1 ==> only numeric symbol passsed
-        const parsed_str = try std.fmt.parseInt(u32, symbol_str, 10);
-        const written = try std.fmt.bufPrint(&self.a_code, "{b:0>16}", .{parsed_str});
+        const value = switch (@TypeOf(symbol)) {
+            []const u8 => try std.fmt.parseInt(u32, symbol, 10),
+            u32 => symbol,
+            else => @compileError("invalid symbol format"),
+        };
 
+        const written = try std.fmt.bufPrint(&self.a_code, "{b:0>16}", .{value});
         if (written.len != 16) return CodeError.InvalidAInstruction;
     }
 
     pub fn gen_c_inst(self: *Codegen) !void {
-        const instruction = ("111" ++ self.dest_code ++ self.comp_code ++ self.jump_code).*;
+        const instruction = ("111" ++ self.comp_code ++ self.dest_code ++ self.jump_code).*;
         const written = try std.fmt.bufPrint(&self.c_code, "{s}", .{instruction});
 
         if (written.len != 16) return CodeError.InvalidCInstruction;

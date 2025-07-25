@@ -1,12 +1,12 @@
 const std = @import("std");
 const Parser = @import("parser.zig").Parser;
 const Codegen = @import("codegen.zig").Codegen;
+const SymbolTable = @import("symtab.zig").SymbolTable;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-
     const args = try std.process.argsAlloc(std.heap.page_allocator);
     defer std.process.argsFree(std.heap.page_allocator, args);
 
@@ -33,38 +33,66 @@ pub fn main() !void {
     defer output_file.close();
 
     // initialize parser & codegen module
-    var parser = Parser.init(allocator, input_file);
-    var codegen = Codegen.init();
+    var parser = Parser.init(input_file);
 
-    while (parser.hasMoreLines()) {
+    // var codegen = Codegen.init();
+    var symtab = SymbolTable.init(allocator);
+    defer symtab.deinit();
+    // 1-pass
+    pass_1: while (parser.hasMoreLines()) {
         try parser.advance();
 
+        // collect symbol
         switch (parser.instruction_type) {
             .A_INSTRUCTION => {
-                // version 1 => @[only_numeric]
-                // version 2 => @[numeric || alphabetic symbol]
-                try codegen.gen_a_inst(parser.symbol());
-                _ = try output_file.write(&codegen.a_code);
-                _ = try output_file.write("\n");
+                const symbol = parser.symbol();
+                if (std.ascii.isDigit(symbol[0])) {
+                    // numeric symbol
+                    continue :pass_1;
+                } else {
+                    try symtab.insert_var_symbol(symbol);
+                }
             },
-            .L_INSTRUCTION => {
-                std.debug.print("L-Instruction: {s}\n", .{parser.symbol()});
-                // symbol_table["name"] <==  current line + 1
-            },
-            .C_INSTRUCTION => {
-                try codegen.dest(parser.dest());
-                try codegen.comp(parser.comp());
-                try codegen.jump(parser.jump());
-                try codegen.gen_c_inst();
 
-                _ = try output_file.write(&codegen.c_code);
-                _ = try output_file.write("\n");
+            .L_INSTRUCTION => {
+                const symbol = parser.symbol();
+                try symtab.insert_label_symbol(symbol, parser.current_line);
             },
-            .NO_INSTRUCTION => {
-                std.debug.print("No more Instruction\n", .{});
-            },
+
+            else => {},
         }
     }
 
+    // 2-pass
+    // while (parser.hasMoreLines()) {
+    //     try parser.advance();
+
+    //     switch (parser.instruction_type) {
+    //         .A_INSTRUCTION => {
+    //             // version 1 => @[only_numeric]
+    //             // version 2 => @[numeric || alphabetic symbol]
+    //             try codegen.gen_a_inst(parser.symbol());
+    //             _ = try output_file.write(&codegen.a_code);
+    //             _ = try output_file.write("\n");
+    //         },
+    //         .L_INSTRUCTION => {
+    //             std.debug.print("L-Instruction: {s}\n", .{parser.symbol()});
+    //             // symbol_table["name"] <==  current line + 1
+    //         },
+    //         .C_INSTRUCTION => {
+    //             try codegen.dest(parser.dest());
+    //             try codegen.comp(parser.comp());
+    //             try codegen.jump(parser.jump());
+    //             try codegen.gen_c_inst();
+
+    //             _ = try output_file.write(&codegen.c_code);
+    //             _ = try output_file.write("\n");
+    //         },
+    //         .NO_INSTRUCTION => {
+    //             std.debug.print("No more Instruction\n", .{});
+    //         },
+    //     }
+    // }
+    std.debug.print("label: {d}\n", .{try symtab.get_value("abc")});
     std.debug.print("Successfully wrote nbytes.\n", .{});
 }

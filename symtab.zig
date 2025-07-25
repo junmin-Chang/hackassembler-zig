@@ -11,11 +11,38 @@ pub const SymbolTable = struct {
     var_value: u32 = 16,
 
     pub fn init(allocator: std.mem.Allocator) SymbolTable {
-        return SymbolTable{
+        var self = SymbolTable{
             .table = std.StringHashMap(u32).init(allocator),
             .allocator = allocator,
             .key_list = std.ArrayList([]const u8).init(allocator),
         };
+
+        self.table.put("R0", 0) catch @panic("symtab initial put failed..\n");
+        self.table.put("R1", 1) catch @panic("symtab initial put failed..\n");
+        self.table.put("R2", 2) catch @panic("symtab initial put failed..\n");
+        self.table.put("R3", 3) catch @panic("symtab initial put failed..\n");
+        self.table.put("R4", 4) catch @panic("symtab initial put failed..\n");
+        self.table.put("R5", 5) catch @panic("symtab initial put failed..\n");
+        self.table.put("R6", 6) catch @panic("symtab initial put failed..\n");
+        self.table.put("R7", 7) catch @panic("symtab initial put failed..\n");
+        self.table.put("R8", 8) catch @panic("symtab initial put failed..\n");
+        self.table.put("R9", 9) catch @panic("symtab initial put failed..\n");
+        self.table.put("R10", 10) catch @panic("symtab initial put failed..\n");
+        self.table.put("R11", 11) catch @panic("symtab initial put failed..\n");
+        self.table.put("R12", 12) catch @panic("symtab initial put failed..\n");
+        self.table.put("R13", 13) catch @panic("symtab initial put failed..\n");
+        self.table.put("R14", 14) catch @panic("symtab initial put failed..\n");
+        self.table.put("R15", 15) catch @panic("symtab initial put failed..\n");
+
+        self.table.put("SP", 0) catch @panic("symtab initial put failed..\n");
+        self.table.put("LCL", 1) catch @panic("symtab initial put failed..\n");
+        self.table.put("ARG", 2) catch @panic("symtab initial put failed..\n");
+        self.table.put("THIS", 3) catch @panic("symtab initial put failed..\n");
+        self.table.put("THAT", 4) catch @panic("symtab initial put failed..\n");
+        self.table.put("SCREEN", 16384) catch @panic("symtab initial put failed..\n");
+        self.table.put("KBD", 24576) catch @panic("symtab initial put failed..\n");
+
+        return self;
     }
 
     pub fn insert_var_symbol(self: *SymbolTable, key: []const u8) !void {

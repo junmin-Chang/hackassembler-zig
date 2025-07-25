@@ -22,6 +22,7 @@ pub const Parser = struct {
     current_line: u32 = 0,
 
     pub fn init(file: std.fs.File) Parser {
+        // buffered reader for reading line by line
         return Parser{
             .reader = std.io.bufferedReader(file.reader()),
         };
@@ -53,6 +54,7 @@ pub const Parser = struct {
 
             line = std.mem.trim(u8, line, " \t\r\n");
 
+            // continue since we didn't read anything
             if (line.len == 0) continue;
 
             // initialize

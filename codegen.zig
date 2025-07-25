@@ -145,11 +145,13 @@ pub const Codegen = struct {
     pub fn gen_a_inst(self: *Codegen, symbol: anytype) !void {
         // version 1 ==> only numeric symbol passsed
         const value = switch (@TypeOf(symbol)) {
+            // since we read symbol in []u8, we should parse it.
             []const u8 => try std.fmt.parseInt(u32, symbol, 10),
             u32 => symbol,
             else => @compileError("invalid symbol format"),
         };
 
+        // for this
         const written = try std.fmt.bufPrint(&self.a_code, "{b:0>16}", .{value});
         if (written.len != 16) return CodeError.InvalidAInstruction;
     }

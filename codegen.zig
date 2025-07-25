@@ -6,6 +6,7 @@ const CodeError = error{
     InvalidCompCode,
     InvalidJumpCode,
     InvalidAInstruction,
+    InvalidCInstruction,
 };
 
 pub const Codegen = struct {
@@ -13,6 +14,7 @@ pub const Codegen = struct {
     comp_code: [7]u8 = undefined,
     jump_code: [3]u8 = undefined,
     a_code: [16]u8 = undefined,
+    c_code: [16]u8 = undefined,
 
     pub fn init() Codegen {
         return Codegen{};
@@ -145,5 +147,12 @@ pub const Codegen = struct {
         const written = try std.fmt.bufPrint(&self.a_code, "{b:0>16}", .{parsed_str});
 
         if (written.len != 16) return CodeError.InvalidAInstruction;
+    }
+
+    pub fn gen_c_inst(self: *Codegen) !void {
+        const instruction = ("111" ++ self.dest_code ++ self.comp_code ++ self.jump_code).*;
+        const written = try std.fmt.bufPrint(&self.c_code, "{s}", .{instruction});
+
+        if (written.len != 16) return CodeError.InvalidCInstruction;
     }
 };

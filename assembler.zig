@@ -43,7 +43,6 @@ pub fn main() !void {
             .A_INSTRUCTION => {
                 // version 1 => @[only_numeric]
                 // version 2 => @[numeric || alphabetic symbol]
-                std.debug.print("A-Instruction : {s}\n", .{parser.symbol()});
                 try codegen.gen_a_inst(parser.symbol());
                 _ = try output_file.write(&codegen.a_code);
                 _ = try output_file.write("\n");
@@ -53,21 +52,16 @@ pub fn main() !void {
                 // symbol_table["name"] <==  current line + 1
             },
             .C_INSTRUCTION => {
-                std.debug.print("C-Instruction: dest={?s}, comp={?s}, jump={?s}\n", .{
-                    parser.dest(),
-                    parser.comp(),
-                    parser.jump(),
-                });
                 try codegen.dest(parser.dest());
                 try codegen.comp(parser.comp());
                 try codegen.jump(parser.jump());
+                try codegen.gen_c_inst();
 
-                const instruction: [16]u8 = ("111" ++ codegen.comp_code ++ codegen.dest_code ++ codegen.jump_code).*;
-                _ = try output_file.write(&instruction);
+                _ = try output_file.write(&codegen.c_code);
                 _ = try output_file.write("\n");
             },
             .NO_INSTRUCTION => {
-                std.debug.print("No Instruction\n", .{});
+                std.debug.print("No more Instruction\n", .{});
             },
         }
     }

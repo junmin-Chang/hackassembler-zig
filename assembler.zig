@@ -38,6 +38,8 @@ pub fn main() !void {
     var symtab = SymbolTable.init(allocator);
     defer symtab.deinit();
 
+    // written bytes while generating machine code (useless but useful sometimes)
+    var nbytes: usize = 0;
     // 1-pass
     pass_1: while (parser.hasMoreLines()) {
         try parser.advance();
@@ -67,21 +69,21 @@ pub fn main() !void {
                 const symbol = parser.symbol();
                 if (std.ascii.isDigit(symbol[0])) {
                     try codegen.gen_a_inst(parser.symbol());
-                    _ = try output_file.write(&codegen.a_code);
+                    nbytes += try output_file.write(&codegen.a_code);
                     _ = try output_file.write("\n");
                 } else {
                     // @[alphabetic]
                     if (symtab.contains(symbol)) {
                         const value = try symtab.get_address(symbol);
                         try codegen.gen_a_inst(value);
-                        _ = try output_file.write(&codegen.a_code);
+                        nbytes += try output_file.write(&codegen.a_code);
                         _ = try output_file.write("\n");
                     } else {
                         // insert symbol to table
                         try symtab.addEntry(symbol, null);
                         const value = try symtab.get_address(symbol);
                         try codegen.gen_a_inst(value);
-                        _ = try output_file.write(&codegen.a_code);
+                        nbytes += try output_file.write(&codegen.a_code);
                         _ = try output_file.write("\n");
                     }
                 }
@@ -94,7 +96,7 @@ pub fn main() !void {
                 try codegen.comp(parser.comp());
                 try codegen.jump(parser.jump());
                 try codegen.gen_c_inst();
-                _ = try output_file.write(&codegen.c_code);
+                nbytes += try output_file.write(&codegen.c_code);
                 _ = try output_file.write("\n");
             },
             .NO_INSTRUCTION => {
@@ -102,5 +104,5 @@ pub fn main() !void {
             },
         }
     }
-    std.debug.print("Successfully wrote nbytes.\n", .{});
+    std.debug.print("Successfully Assembled! => {d}Bytes written\n", .{nbytes});
 }

@@ -19,12 +19,11 @@ pub const Parser = struct {
     current_jump: ?[]const u8 = null,
 
     eof_reached: bool = false,
-    allocator: std.mem.Allocator,
+    current_line: u32 = 0,
 
-    pub fn init(allocator: std.mem.Allocator, file: std.fs.File) Parser {
+    pub fn init(file: std.fs.File) Parser {
         return Parser{
             .reader = std.io.bufferedReader(file.reader()),
-            .allocator = allocator,
         };
     }
     pub fn hasMoreLines(self: *Parser) bool {
@@ -66,6 +65,7 @@ pub const Parser = struct {
                 // A-Instruction ! parse something like @xxx
                 self.instruction_type = InstructionType.A_INSTRUCTION;
                 self.symbol_or_value = line[1..];
+                self.current_line += 1;
             } else if (line[0] == '(' and line[line.len - 1] == ')') {
                 // L-Instruction ! parse something like (xxx) <-- which is label
                 self.instruction_type = InstructionType.L_INSTRUCTION;
@@ -96,6 +96,8 @@ pub const Parser = struct {
                     // comp
                     self.current_comp = line[comp_idx..];
                 }
+
+                self.current_line += 1;
             }
             break;
         }

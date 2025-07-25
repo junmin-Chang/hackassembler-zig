@@ -2,16 +2,17 @@ const std = @import("std");
 const eql = std.mem.eql;
 
 const CodeError = error{
-    InvalidInstruction,
     InvalidDestCode,
     InvalidCompCode,
     InvalidJumpCode,
+    InvalidAInstruction,
 };
 
 pub const Codegen = struct {
     dest_code: [3]u8 = undefined,
     comp_code: [7]u8 = undefined,
     jump_code: [3]u8 = undefined,
+    a_code: [16]u8 = undefined,
 
     pub fn init() Codegen {
         return Codegen{};
@@ -136,5 +137,13 @@ pub const Codegen = struct {
         } else if (eql(u8, str, "JMP")) {
             self.jump_code = "111".*;
         } else return CodeError.InvalidJumpCode;
+    }
+
+    pub fn gen_a_inst(self: *Codegen, symbol_str: []const u8) !void {
+        // version 1 ==> only numeric symbol passsed
+        const parsed_str = try std.fmt.parseInt(u32, symbol_str, 10);
+        const written = try std.fmt.bufPrint(&self.a_code, "{b:0>16}", .{parsed_str});
+
+        if (written.len != 16) return CodeError.InvalidAInstruction;
     }
 };

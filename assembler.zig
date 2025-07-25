@@ -41,10 +41,16 @@ pub fn main() !void {
 
         switch (parser.instruction_type) {
             .A_INSTRUCTION => {
+                // version 1 => @[only_numeric]
+                // version 2 => @[numeric || alphabetic symbol]
                 std.debug.print("A-Instruction : {s}\n", .{parser.symbol()});
+                try codegen.gen_a_inst(parser.symbol());
+                _ = try output_file.write(&codegen.a_code);
+                _ = try output_file.write("\n");
             },
             .L_INSTRUCTION => {
                 std.debug.print("L-Instruction: {s}\n", .{parser.symbol()});
+                // symbol_table["name"] <==  current line + 1
             },
             .C_INSTRUCTION => {
                 std.debug.print("C-Instruction: dest={?s}, comp={?s}, jump={?s}\n", .{

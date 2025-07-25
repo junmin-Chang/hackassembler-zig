@@ -35,7 +35,7 @@ pub fn main() !void {
     // initialize parser & codegen module
     var parser = Parser.init(input_file);
 
-    // var codegen = Codegen.init();
+    var codegen = Codegen.init();
     var symtab = SymbolTable.init(allocator);
     defer symtab.deinit();
     // 1-pass
@@ -44,55 +44,62 @@ pub fn main() !void {
 
         // collect symbol
         switch (parser.instruction_type) {
-            .A_INSTRUCTION => {
-                const symbol = parser.symbol();
-                if (std.ascii.isDigit(symbol[0])) {
-                    // numeric symbol
-                    continue :pass_1;
-                } else {
-                    try symtab.insert_var_symbol(symbol);
-                }
-            },
-
             .L_INSTRUCTION => {
                 const symbol = parser.symbol();
                 try symtab.insert_label_symbol(symbol, parser.current_line);
             },
 
-            else => {},
+            else => continue :pass_1,
         }
     }
-
+    try input_file.seekTo(0);
+    parser = Parser.init(input_file);
     // 2-pass
-    // while (parser.hasMoreLines()) {
-    //     try parser.advance();
 
-    //     switch (parser.instruction_type) {
-    //         .A_INSTRUCTION => {
-    //             // version 1 => @[only_numeric]
-    //             // version 2 => @[numeric || alphabetic symbol]
-    //             try codegen.gen_a_inst(parser.symbol());
-    //             _ = try output_file.write(&codegen.a_code);
-    //             _ = try output_file.write("\n");
-    //         },
-    //         .L_INSTRUCTION => {
-    //             std.debug.print("L-Instruction: {s}\n", .{parser.symbol()});
-    //             // symbol_table["name"] <==  current line + 1
-    //         },
-    //         .C_INSTRUCTION => {
-    //             try codegen.dest(parser.dest());
-    //             try codegen.comp(parser.comp());
-    //             try codegen.jump(parser.jump());
-    //             try codegen.gen_c_inst();
+    pass_2: while (parser.hasMoreLines()) {
+        try parser.advance();
 
-    //             _ = try output_file.write(&codegen.c_code);
-    //             _ = try output_file.write("\n");
-    //         },
-    //         .NO_INSTRUCTION => {
-    //             std.debug.print("No more Instruction\n", .{});
-    //         },
-    //     }
-    // }
-    std.debug.print("label: {d}\n", .{try symtab.get_value("abc")});
+        switch (parser.instruction_type) {
+            .A_INSTRUCTION => {
+                // version 1 => @[only_numeric]
+                // version 2 => @[numeric || alphabetic symbol]
+                const symbol = parser.symbol();
+                if (std.ascii.isDigit(symbol[0])) {
+                    try codegen.gen_a_inst(parser.symbol());
+                    _ = try output_file.write(&codegen.a_code);
+                    _ = try output_file.write("\n");
+                } else {
+                    // @xxx -> xxx = alphabetic
+                    if (symtab.table.contains(symbol)) {
+                        const value = try symtab.get_value(symbol);
+                        try codegen.gen_a_inst(value);
+                        _ = try output_file.write(&codegen.a_code);
+                        _ = try output_file.write("\n");
+                    } else {
+                        // insert
+                        try symtab.insert_var_symbol(symbol);
+                        const value = try symtab.get_value(symbol);
+                        try codegen.gen_a_inst(value);
+                        _ = try output_file.write(&codegen.a_code);
+                        _ = try output_file.write("\n");
+                    }
+                }
+            },
+            .L_INSTRUCTION => {
+                continue :pass_2;
+            },
+            .C_INSTRUCTION => {
+                try codegen.dest(parser.dest());
+                try codegen.comp(parser.comp());
+                try codegen.jump(parser.jump());
+                try codegen.gen_c_inst();
+                _ = try output_file.write(&codegen.c_code);
+                _ = try output_file.write("\n");
+            },
+            .NO_INSTRUCTION => {
+                std.debug.print("No more Instruction\n", .{});
+            },
+        }
+    }
     std.debug.print("Successfully wrote nbytes.\n", .{});
 }

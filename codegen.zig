@@ -46,8 +46,11 @@ pub const Codegen = struct {
         }
     }
 
-    pub fn comp(self: *Codegen, str: []const u8) !void {
+    pub fn comp(self: *Codegen, str_optional: ?[]const u8) !void {
         // 7-bit output
+        if (str_optional == null) return CodeError.InvalidCompCode;
+
+        const str = str_optional.?;
         if (eql(u8, str, "0")) {
             self.comp_code = "0101010".*;
         } else if (eql(u8, str, "1")) {

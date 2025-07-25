@@ -1,6 +1,6 @@
 const std = @import("std");
 const Parser = @import("parser.zig").Parser;
-const codegen = @import("codegen.zig");
+const Codegen = @import("codegen.zig").Codegen;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -20,9 +20,21 @@ pub fn main() !void {
     var input_file = try cwd.openFile(args[1], .{});
     defer input_file.close();
 
-    var parser = Parser.init(allocator, input_file);
+    // make output_dir to store generated machine code;
+    cwd.makeDir("output") catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return err,
+    };
 
-    std.debug.print("Parsing .. {}\n", input_file);
+    var output_dir = try cwd.openDir("output", .{});
+    defer output_dir.close();
+
+    const output_file = try output_dir.createFile("output.hack", .{});
+    defer output_file.close();
+
+    // initialize parser & codegen module
+    var parser = Parser.init(allocator, input_file);
+    var codegen = Codegen.init();
 
     while (parser.hasMoreLines()) {
         try parser.advance();
@@ -40,25 +52,19 @@ pub fn main() !void {
                     parser.comp(),
                     parser.jump(),
                 });
+                try codegen.dest(parser.dest());
+                try codegen.comp(parser.comp());
+                try codegen.jump(parser.jump());
+
+                const instruction: [16]u8 = ("111" ++ codegen.comp_code ++ codegen.dest_code ++ codegen.jump_code).*;
+                _ = try output_file.write(&instruction);
+                _ = try output_file.write("\n");
             },
             .NO_INSTRUCTION => {
                 std.debug.print("No Instruction\n", .{});
             },
         }
     }
-    // make output_dir to store generated machine code;
-    cwd.makeDir("output") catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => return err,
-    };
-
-    var output_dir = try cwd.openDir("output", .{});
-    defer output_dir.close();
-
-    const output_file = try output_dir.createFile("output.hack", .{});
-    defer output_file.close();
-
-    // parsing ... codegen ...
 
     std.debug.print("Successfully wrote nbytes.\n", .{});
 }

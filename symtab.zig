@@ -46,7 +46,7 @@ pub const SymbolTable = struct {
         return self;
     }
 
-    pub fn addEntry(self: *SymbolTable, key: []const u8, value: ?u32) !void {
+    pub fn add_entry(self: *SymbolTable, key: []const u8, value: ?u32) !void {
         if (self.contains(key)) {
             return SymbolTableError.AlreadyExistsSymbol;
         }

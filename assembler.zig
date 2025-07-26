@@ -49,7 +49,7 @@ pub fn main() !void {
             .L_INSTRUCTION => {
                 // (LABEL)
                 const symbol = parser.symbol();
-                try symtab.addEntry(symbol, parser.current_line);
+                try symtab.add_entry(symbol, parser.current_line);
             },
 
             else => continue :pass_1,
@@ -80,7 +80,7 @@ pub fn main() !void {
                         _ = try output_file.write("\n");
                     } else {
                         // insert symbol to table
-                        try symtab.addEntry(symbol, null);
+                        try symtab.add_entry(symbol, null);
                         const value = try symtab.get_address(symbol);
                         try codegen.gen_a_inst(value);
                         nbytes += try output_file.write(&codegen.a_code);
